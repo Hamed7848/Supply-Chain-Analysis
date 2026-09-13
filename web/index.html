@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply Chain Analytics | Medallion Pipeline Portfolio</title>
+<meta name="description" content="Portfolio presentation of a MySQL medallion-architecture supply chain analytics pipeline with Power BI reporting layer.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Supply Chain Analytics — Medallion Pipeline (Bronze → Silver → Gold)">
+<meta property="og:description" content="Portfolio project: 20,000 sales orders + 2,000 purchase orders cleaned, validated and modeled into a star schema in MySQL, with Power BI dashboards. $15.5M revenue, $5.6M profit, supplier on-time delivery vs. reported performance.">
+<meta property="og:image" content="https://hamed7848.github.io/Supply-Chain-Analysis/web/preview.png">
+<meta property="og:url" content="https://hamed7848.github.io/Supply-Chain-Analysis/web/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0a0f1c; --bg2:#0d1424; --panel:#111a2e; --panel2:#16213a;
+  --border:#1f2b47; --border2:#2a3a5c;
+  --text:#e6ecf7; --muted:#8fa1c0;
+  --indigo:#6366f1; --cyan:#22d3ee; --emerald:#34d399; --amber:#fbbf24;
+  --rose:#fb7185; --violet:#a78bfa;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg); color:var(--text);
+  line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+::selection{background:#6366f1;color:#fff}
+.wrap{max-width:1280px;margin:0 auto;padding:0 24px}
+
+/* ---------- nav ---------- */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  backdrop-filter:blur(14px);background:rgba(10,15,28,.82);
+  border-bottom:1px solid var(--border);
+}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{font-weight:800;font-size:15px;letter-spacing:.2px;display:flex;align-items:center;gap:10px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--cyan));box-shadow:0 0 12px #6366f1}
+nav ul{display:flex;gap:4px;list-style:none}
+nav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:8px 12px;border-radius:8px;transition:.18s}
+nav a:hover{color:var(--text);background:rgba(99,102,241,.12)}
+nav a.cta{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+
+/* ---------- hero ---------- */
+.hero{padding:150px 0 70px;position:relative;overflow:hidden;
+  background:
+   radial-gradient(900px 420px at 12% -10%, rgba(99,102,241,.20), transparent 60%),
+   radial-gradient(800px 400px at 90% 0%, rgba(34,211,238,.14), transparent 55%),
+   var(--bg);
+}
+.hero:before{content:"";position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+  background-size:42px 42px;pointer-events:none}
+.tag{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;color:var(--cyan);
+  border:1px solid rgba(34,211,238,.3);background:rgba(34,211,238,.08);
+  padding:7px 14px;border-radius:999px;margin-bottom:22px}
+h1{font-size:clamp(30px,5vw,52px);font-weight:800;letter-spacing:-1.5px;line-height:1.12}
+h1 .grad{background:linear-gradient(90deg,#818cf8,#22d3ee 60%,#34d399);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{max-width:720px;color:#b9c6de;font-size:16.5px;margin-top:18px}
+.badges{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
+.badge{font-size:12.5px;font-weight:600;color:#cfdaf0;background:var(--panel);
+  border:1px solid var(--border);padding:7px 13px;border-radius:9px}
+.badge b{color:var(--cyan);font-weight:700}
+.hero-actions{display:flex;gap:12px;margin-top:30px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;
+  padding:12px 20px;border-radius:11px;text-decoration:none;transition:.18s}
+.btn.primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 6px 24px rgba(99,102,241,.35)}
+.btn.primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(99,102,241,.5)}
+.btn.ghost{border:1px solid var(--border2);color:var(--text)}
+.btn.ghost:hover{border-color:var(--indigo);background:rgba(99,102,241,.08)}
+
+.metrics-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:52px}
+.metric{background:rgba(17,26,46,.7);border:1px solid var(--border);border-radius:12px;padding:16px}
+.metric .lbl{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.metric .val{font-size:22px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+.metric .sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ---------- sections ---------- */
+section{padding:72px 0}
+section.alt{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.sec-head{margin-bottom:34px}
+.sec-kicker{color:var(--cyan);font-size:12.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+h2{font-size:clamp(24px,3.4vw,34px);font-weight:800;letter-spacing:-.8px;margin-top:8px}
+.sec-desc{color:var(--muted);max-width:760px;margin-top:10px;font-size:15px}
+
+.grid{display:grid;gap:20px}
+.grid.c2{grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.grid.c3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.card h3{font-size:15px;font-weight:700;color:#dbe5f6;margin-bottom:4px}
+.card .hint{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.card .chart-wrap{position:relative;height:290px}
+.card .chart-wrap.tall{height:335px}
+.lg{width:100%;letter-spacing:.4px}
+
+/* ---------- pipeline ---------- */
+.pipeline{display:grid;grid-template-columns:1fr 44px 1fr 44px 1fr;align-items:center;gap:10px}
+.pipe{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--border2);border-radius:var(--radius);padding:24px;position:relative;overflow:hidden}
+.pipe::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#f43f5e,#fbbf24,#22d3ee)}
+.pipe.gold::before{background:linear-gradient(90deg,#fbbf24,#34d399)}
+.pipe .lvl{font-size:11px;font-weight:800;letter-spacing:2px;border-radius:999px;padding:5px 12px;display:inline-block}
+.pipe.silver .lvl{background:rgba(148,163,184,.15);color:#cbd5e1;border:1px solid rgba(148,163,184,.35)}
+.pipe.bronze .lvl{background:rgba(244,63,94,.12);color:var(--rose);border:1px solid rgba(244,63,94,.35)}
+.pipe.gold .lvl{background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.35)}
+.pipe h3{margin:12px 0 8px}
+.pipe p{font-size:13px;color:var(--muted)}
+.pipe ul{margin-top:12px;list-style:none;display:flex;flex-direction:column;gap:6px}
+.pipe li{font-size:12px;color:#b9c6de;display:flex;gap:8px;align-items:flex-start}
+.pipe li::before{content:"→";color:var(--indigo);font-weight:700}
+.pipe.gold li::before{color:var(--amber)}
+.arrow{color:#475777;font-size:26px;text-align:center}
+
+.datasets{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:26px}
+.ds{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--bg2)}
+.ds .n{font-size:13px;font-weight:700;color:#c6d3ea}
+.ds .r{font-size:11.5px;color:var(--muted);margin-top:2px}
+.ds .rows{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}
+.ds .rows span{font-size:12px;color:var(--muted);font-weight:600}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::after{content:"";position:absolute;right:-22px;top:-22px;width:78px;height:78px;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--ac,#6366f1) 30%,transparent),transparent)}
+.kpi .t{font-size:11.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-size:26px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12.5px;color:var(--muted);margin-top:3px}
+.kpi .s.good{color:var(--emerald)}
+.kpi .s.bad{color:var(--rose)}
+
+/* ---------- data quality ---------- */
+.dq{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.dq-item{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;gap:16px;align-items:flex-start}
+.dq-item .ic{width:42px;height:42px;flex:none;border-radius:11px;display:grid;place-items:center;font-size:19px}
+.dq-item.ok .ic{background:rgba(52,211,153,.12);color:var(--emerald);border:1px solid rgba(52,211,153,.3)}
+.dq-item.warn .ic{background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+.dq-item.bad .ic{background:rgba(251,113,133,.12);color:var(--rose);border:1px solid rgba(251,113,133,.3)}
+.dq-item h4{font-size:14px;font-weight:700}
+.dq-item p{font-size:12.8px;color:var(--muted);margin-top:4px}
+.dq-item .num{font-size:22px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+.note{margin-top:16px;background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.22);border-radius:12px;padding:14px 18px;font-size:13px;color:#b9d8e8}
+
+/* ---------- table ---------- */
+.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.toolbar input{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:10px 14px;font-size:13px;width:260px;outline:none}
+.toolbar input:focus{border-color:var(--indigo)}
+.toolbar span{font-size:12.5px;color:var(--muted)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}
+thead th{background:var(--bg2);color:#9fb0cd;font-size:11px;text-transform:uppercase;letter-spacing:.7px;padding:12px 14px;text-align:left;cursor:pointer;white-space:nowrap;user-select:none}
+thead th:hover{color:var(--cyan)}
+thead th .arr{color:var(--cyan);font-size:10px}
+tbody td{padding:11px 14px;border-top:1px solid var(--border);white-space:nowrap;color:#c6d3ea;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:rgba(99,102,241,.06)}
+tbody tr.hidden{display:none}
+.pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px}
+.pill.good{background:rgba(52,211,153,.14);color:var(--emerald)}
+.pill.bad{background:rgba(251,113,133,.14);color:var(--rose)}
+.pill.mid{background:rgba(251,191,36,.14);color:var(--amber)}
+.pill.gap{background:rgba(167,139,250,.16);color:var(--violet)}
+
+/* ---------- misc ---------- */
+.tech-list{display:flex;flex-wrap:wrap;gap:10px}
+.tech{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:var(--bg2);border:1px solid var(--border2);color:#b9c6de;padding:9px 14px;border-radius:9px}
+footer{border-top:1px solid var(--border);padding:38px 0 44px;background:var(--bg2)}
+footer .wrap{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.fade-in{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+.fade-in.on{opacity:1;transform:none}
+@media(max-width:880px){
+  .grid.c2{grid-template-columns:1fr}
+  .pipeline{grid-template-columns:1fr;gap:14px}
+  .arrow{transform:rotate(90deg)}
+  nav ul{display:none}
+  .hero{padding-top:120px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span>Supply&nbsp;Chain&nbsp;Analytics</div>
+    <ul>
+      <li><a href="#pipeline">Pipeline</a></li>
+      <li><a href="#kpis">KPIs</a></li>
+      <li><a href="#sales">Sales</a></li>
+      <li><a href="#procurement">Procurement</a></li>
+      <li><a href="#suppliers">Suppliers</a></li>
+      <li><a href="#quality">Data Quality</a></li>
+      <li><a class="cta" href="#quality">Results</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="tag">Data Engineering &middot; MySQL &middot; Power BI</div>
+    <h1>Supply Chain Analytics<br><span class="grad">Medallion Data Pipeline</span></h1>
+    <p class="lead">
+      A Bronze &rarr; Silver &rarr; Gold data pipeline that ingests five raw business datasets,
+      validates every record, builds a star-schema analytics layer, and powers KPI dashboards.
+      This page is the portfolio view of the project &mdash; every figure below is computed directly
+      from the source CSVs using the same rules as the SQL pipeline.
+    </p>
+    <div class="badges">
+      <span class="badge">5 <b>raw datasets</b></span>
+      <span class="badge">22,800 <b>transactions</b></span>
+      <span class="badge">20,000 <b>sales orders</b></span>
+      <span class="badge">2,000 <b>purchase orders</b></span>
+      <span class="badge"><b>3-layer</b> medallion architecture</span>
+      <span class="badge"><b>SQL views</b> for the Gold layer</span>
+    </div>
+    <div class="hero-actions">
+      <a class="btn primary" href="#kpis">Explore the data</a>
+      <a class="btn ghost" href="#pipeline">How it works</a>
+    </div>
+
+    <div class="metrics-strip" id="heroMetrics"></div>
+  </div>
+</header>
+
+<section id="pipeline">
+  <div class="wrap">
+    <div class="sec-head fade-in">
+      <div class="sec-kicker">Architecture</div>
+      <h2>Bronze &rarr; Silver &rarr; Gold</h2>
+      <p class="sec-desc">
+        The same progressive-data-quality layering used in modern lakehouse platforms, built in SQL.
+        Raw exports land as-is, get cleaned and validated, then surface as analysis-ready facts, dimensions and KPIs.
+      </p>
+    </div>
+    <div class="pipeline fade-in">
+      <div class="pipe bronze">
+        <span class="lvl">BRONZE</span>
+        <h3>Raw ingestion</h3>
+        <p>CSVs loaded verbatim, every column as VARCHAR, with a surrogate <code>bronze_id</code> for ordered dedup.</p>
+        <ul>
+          <li>Zero transformation or business logic</li>
+          <li>Source fidelity preserved &mdash; malformed values captured, not dropped</li>
+          <li>AUTO_INCREMENT key tracks load order</li>
+        </ul>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="pipe silver">
+        <span class="lvl">SILVER</span>
+        <h3>Cleaned &amp; validated</h3>
+        <p>Type casting, dedup, text standardization and business-rule validation on every row.</p>
+        <ul>
+          <li>Text &rarr; DATE / DECIMAL / INT casting</li>
+          <li>Totals recomputed &amp; mismatch-flagged</li>
+          <li>Lateness recalculated from shipping dates</li>
+          <li>Orphan foreign-key checks</li>
+        </ul>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="pipe gold">
+        <span class="lvl">GOLD</span>
+        <h3>Business-ready layer</h3>
+        <p>Star schema of dimensions, facts and pre-aggregated KPI views for reporting.</p>
+        <ul>
+          <li>dim_customer &middot; dim_product &middot; dim_supplier</li>
+          <li>fact_sales &middot; fact_procurement</li>
+          <li>Supplier / product / monthly summary KPIs</li>
+          <li>Views, not tables &mdash; always in sync with Silver</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sec-head" style="margin-top:54px">
+      <div class="sec-kicker">Datasets</div>
+      <h2>What goes in</h2>
+    </div>
+    <div class="datasets fade-in" id="datasets"></div>
+  </div>
+</section>
+
+<section class="alt" id="kpis">
+  <div class="wrap">
+    <div class="sec-head fade-in">
+      <div class="sec-kicker">Headline KPIs</div>
+      <h2>Revenue on the sales side, risk on the supply side</h2>
+      <p class="sec-desc">
+        Two fact streams &mdash; customer sales and supplier procurement &mdash; with KPIs derived from the
+        Silver-layer validated fields, exactly as the Power BI measures compute them.
+      </p>
+    </div>
+    <div class="kpis" id="kpiGrid"></div>
+  </div>
+</section>
+
+<section id="sales">
+  <div class="wrap">
+    <div class="sec-head fade-in">
+      <div class="sec-kicker">Sales Analytics</div>
+      <h2>20,000 customer orders, one clean view</h2>
+      <p class="sec-desc">
+        Monthly trends, product profitability, customer mix and logistics performance &mdash; all built on
+        the recalculated (not blindly trusted) order fields.
+      </p>
+    </div>
+    <div class="grid c2" id="salesCharts"></div>
+  </div>
+</section>
+
+<section class="alt" id="procurement">
+  <div class="wrap">
+    <div class="sec-head fade-in">
+      <div class="sec-kicker">Procurement Analytics</div>
+      <h2>2,000 purchase orders: spend &amp; delivery risk</h2>
+      <p class="sec-desc">
+        Supplier spend concentration, regional exposure and &mdash; most importantly &mdash; the gap between what
+        suppliers report about their on-time delivery and what the data actually shows.
+      </p>
+    </div>
+    <div class="grid c2" id="procCharts"></div>
+  </div>
+</section>
+
+<section id="suppliers">
+  <div class="wrap">
+    <div class="sec-head fade-in">
+      <div class="sec-kicker">Supplier Performance</div>
+      <h2>Reported vs. actual on-time delivery</h2>
+      <p class="sec-desc">
+        Each supplier carries a self-reported on-time rate. The pipeline recalculates the real rate from
+        planned vs. actual delivery dates. Sort, search, and see who over-promises.
+      </p>
+    </div>
+    <div class="card fade-in">
+      <div class="toolbar">
+        <div class="lg"><strong style="color:#dbe5f6" id="supCount"></strong></div>
+        <input id="supSearch" type="text" placeholder="Search supplier, region or country...">
+      </div>
+      <div class="tbl-wrap">
+        <table id="supTable">
+          <thead><tr id="supHead"></tr></thead>
+          <tbody id="supBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="grid c2" style="margin-top:20px">
+      <div class="card fade-in">
+        <h3>Worst self-reporting gaps</h3>
+        <div class="hint">Stated on-time rate minus actual on-time rate, percentage points (top 12).</div>
+        <div class="chart-wrap"><canvas id="otrGapChart"></canvas></div>
+      </div>
+      <div class="card fade-in">
+        <h3>Stated vs. actual on-time rate</h3>
+        <div class="hint">Every supplier plotted. Points below the diagonal over-promise on delivery.</div>
+        <div class="chart-wrap"><canvas id="otrScatterChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="quality">
+  <div class="wrap">
+    <div class="sec-head fade-in">
+      <div class="sec-kicker">Data Quality</div>
+      <h2>Validation isn't a step &mdash; it's the pipeline</h2>
+      <p class="sec-desc">
+        Every Silver-layer load runs automated checks: totals are recomputed from raw fields, lateness is
+        recalculated from dates, orphan keys are surfaced, and row counts are reconciled with Bronze.
+      </p>
+    </div>
+    <div class="dq" id="dqGrid"></div>
+    <div class="note fade-in" id="dqNote"></div>
+    <div class="grid c3" style="margin-top:20px" id="stockGrid"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <div class="brand" style="color:var(--text)"><span class="dot"></span>Supply Chain Analytics</div>
+      <p style="margin-top:8px;max-width:480px">
+        End-to-end data engineering project: CSV ingestion &rarr; Bronze &rarr; Silver validation &rarr;
+        Gold views &rarr; Power BI. This page renders live KPI aggregates embedded from the source datasets.
+      </p>
+    </div>
+    <div>
+      <div class="tech-list">
+        <span class="tech">MySQL</span>
+        <span class="tech">SQL Window Functions</span>
+        <span class="tech">Star Schema</span>
+        <span class="tech">Power BI / DAX</span>
+        <span class="tech">RANKX</span>
+        <span class="tech">Data Validation</span>
+        <span class="tech">Medallion Lakehouse</span>
+      </div>
+      <p style="margin-top:14px">Author: Hamed Ahmed Hamed &middot; project data detailed in the README</p>
+    </div>
+  </div>
+</footer>
+
+<script src="dashboard_data.js"></script>
+<script>
+const D = window.DASHBOARD_DATA;
+const $ = s => document.querySelector(s);
+const fmt = new Intl.NumberFormat("en-US");
+const money = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n);
+const moneyC = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",notation:"compact",maximumFractionDigits:1}).format(n);
+const pct = n => n + "%";
+const PALETTE = ["#6366f1","#22d3ee","#34d399","#fbbf24","#fb7185","#a78bfa","#fb923c","#2dd4bf","#60a5fa","#f472b6","#4ade80","#e879f9"];
+
+Chart.defaults.font.family = "'Inter',system-ui,sans-serif";
+Chart.defaults.color = "#8fa1c0";
+Chart.defaults.borderColor = "rgba(143,161,192,.12)";
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.boxWidth = 8;
+Chart.defaults.plugins.legend.labels.padding = 14;
+
+// ---------- hero metrics ----------
+(function(){
+  const S = D.sales, P = D.procurement;
+  const items = [
+    {l:"Total revenue",      v:moneyC(S.total_revenue), s:S.total_orders.toLocaleString()+" orders"},
+    {l:"Gross profit",       v:moneyC(S.total_profit),  s:"avg "+money(S.avg_profit_per_order)+"/order"},
+    {l:"Units sold",         v:fmt.format(S.total_units), s:"across "+S.total_orders.toLocaleString()+" orders"},
+    {l:"Total spend",        v:moneyC(P.total_spend),   s:P.total_pos.toLocaleString()+" purchase orders"},
+    {l:"Actual on-time rate",v:pct(P.actual_otr),       s:"recalculated from dates"},
+  ];
+  $("#heroMetrics").innerHTML = items.map(i=>`
+    <div class="metric"><div class="lbl">${i.l}</div><div class="val">${i.v}</div><div class="sub">${i.s}</div></div>`).join("");
+})();
+
+// ---------- datasets ----------
+(function(){
+  const m = D.meta;
+  const map = [
+    {n:"sales_orders",    r:m.sales_orders, d:"Customer sales transactions"},
+    {n:"customer_master", r:m.customers,    d:"Customer reference data"},
+    {n:"product_master",  r:m.products,     d:"Product catalog & pricing"},
+    {n:"procurement_orders", r:m.procurement_orders, d:"Supplier purchase orders"},
+    {n:"supplier_master", r:m.suppliers,    d:"Supplier performance data"},
+  ];
+  $("#datasets").innerHTML = map.map(x=>`
+    <div class="ds">
+      <div class="n">${x.n}</div>
+      <div class="r">${x.d}</div>
+      <div class="rows" style="margin-top:8px">${fmt.format(x.r)} <span>rows</span></div>
+    </div>`).join("");
+})();
+
+// ---------- KPI grid ----------
+(function(){
+  const S = D.sales, P = D.procurement;
+  const statedAvg = D.supplier_performance.reduce((a,s)=>a+s.stated,0)/(D.supplier_performance.length||1);
+  const kpis = [
+    {ac:"#6366f1",t:"Total revenue",v:money(S.total_revenue),s:"across "+fmt.format(S.total_orders)+" orders"},
+    {ac:"#34d399",t:"Total profit",v:money(S.total_profit),s:"margin-driven, "+pct(Math.round(S.total_profit/S.total_revenue*1000)/10)+" of revenue"},
+    {ac:"#22d3ee",t:"Avg profit / order",v:money(S.avg_profit_per_order),s:"runs from loss-making to premium"},
+    {ac:"#fbbf24",t:"Total spend",v:money(P.total_spend),s:fmt.format(P.total_pos)+" purchase orders across "+fmt.format(D.meta.suppliers)+" suppliers"},
+    {ac:"#fb7185",t:"Actual on-time rate",v:pct(P.actual_otr),s:"suppliers deliver late on "+pct(P.late_rate)+" of POs"},
+    {ac:"#a78bfa",t:"Avg delivery delay",v:P.avg_delay_days+" days",s:"actual minus planned, all POs"},
+    {ac:"#fb923c",t:"Avg stated OTR",v:pct(Math.round(statedAvg*10)/10),s:"what suppliers report vs "+pct(P.actual_otr)+" actual"},
+    {ac:"#2dd4bf",t:"Avg order value",v:money(S.avg_revenue_per_order),s:"order_total ÷ order count"},
+  ];
+  $("#kpiGrid").innerHTML = kpis.map(k=>`
+    <div class="kpi" style="--ac:${k.ac}">
+      <div class="t">${k.t}</div>
+      <div class="v">${k.v}</div>
+      <div class="s">${k.s}</div>
+    </div>`).join("");
+})();
+
+// ---------- chart cards ----------
+function card(title, hint, itemId, tall){
+  return `<div class="card fade-in"><h3>${title}</h3><div class="hint">${hint}</div><div class="chart-wrap${tall?" tall":""}"><canvas id="${itemId}"></canvas></div></div>`;
+}
+
+function ensureCanvas(id){
+  const el = document.getElementById(id);
+  if(!el || typeof Chart === "undefined"){
+    const box = el && el.parentElement; if(box) box.innerHTML = "<div style='color:#fb7185;font-size:13px'>Chart.js failed to load (offline?).</div>";
+    return null;
+  }
+  return el.getContext("2d");
+}
+
+function baseOptions(){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:"bottom"}},
+    animation:{duration:650},
+  };
+}
+
+// ================= SALES CHARTS =================
+function buildSales(){
+  const box = $("#salesCharts");
+  box.innerHTML =
+    card("Monthly revenue & profit","Validated order data, aggregated by order month (Gold: monthly_sales_summary).","monthlySalesChart") +
+    card("Revenue by product category","One row per order line, joined to dim_product (Gold: product_profitability_summary).","categoryChart") +
+    card("Top 10 products by profit","Total profit per product across all completed and pending orders.","topProductChart") +
+    card("Revenue by customer industry","Customers joined from dim_customer via fact_sales.","industryChart") +
+    card("B2B vs B2C mix","Market segment split by revenue.","segmentChart") +
+    card("Order status breakdown","Active pipeline: shipped, pending, cancelled, returned.","statusChart") +
+    card("Delivery status","On Time vs Late as calculated by the shipping dates, not the source flag.","deliveryChart") +
+    card("Revenue by shipping carrier","Logistics mix across the four carriers.","carrierChart") +
+    card("Units sold by shipping mode","Order count by shipping mode used.","modeChart") +
+    card("Top revenue countries","Customer location concentration, top 8 by revenue.","countryChart");
+
+  const ms = D.monthly_sales;
+  { const c = ensureCanvas("monthlySalesChart"); if(c){
+    new Chart(c,{type:"line",
+      data:{labels:ms.map(m=>m.month),datasets:[
+        {label:"Revenue",data:ms.map(m=>m.revenue),borderColor:"#6366f1",backgroundColor:"rgba(99,102,241,.12)",fill:true,borderWidth:2,tension:.35},
+        {label:"Profit",data:ms.map(m=>m.profit),borderColor:"#34d399",borderWidth:2,tension:.35,pointRadius:0},
+      ]},options:baseOptions()});
+  }}
+  { const cat = D.sales_by_category; const c = ensureCanvas("categoryChart"); if(c){
+    new Chart(c,{type:"doughnut",
+      data:{labels:cat.map(x=>x.category),datasets:[{data:cat.map(x=>x.revenue),backgroundColor:PALETTE,borderWidth:2,borderColor:"#111a2e"}]},
+      options:{...baseOptions(),cutout:"62%"}});
+  }}
+  { const t = D.top_products; const c = ensureCanvas("topProductChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:t.map(x=>x.name),datasets:[{label:"Profit",data:t.map(x=>x.profit),backgroundColor:"#34d399",borderRadius:5}]},
+      options:{...baseOptions(),indexAxis:"y",plugins:{legend:{display:false}} ,scales:{x:{grid:{display:false}}}}});
+  }}
+  { const ind = D.sales_by_industry; const c = ensureCanvas("industryChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:ind.map(x=>x.industry),datasets:[{label:"Revenue",data:ind.map(x=>x.revenue),backgroundColor:PALETTE,borderRadius:6}]},
+      options:{...baseOptions(),plugins:{legend:{display:false}},scales:{y:{grid:{color:"rgba(143,161,192,.08)"}}}}});
+  }}
+  { const seg = D.sales_by_segment; const c = ensureCanvas("segmentChart"); if(c){
+    new Chart(c,{type:"doughnut",
+      data:{labels:seg.map(x=>x.segment),datasets:[{data:seg.map(x=>x.revenue),backgroundColor:["#6366f1","#22d3ee"],borderWidth:2,borderColor:"#111a2e"}]},
+      options:{...baseOptions(),cutout:"62%"}});
+  }}
+  { const st = D.sales_by_status; const c = ensureCanvas("statusChart"); if(c){
+    new Chart(c,{type:"doughnut",
+      data:{labels:st.map(x=>x.status),datasets:[{data:st.map(x=>x.count),backgroundColor:PALETTE,borderWidth:2,borderColor:"#111a2e"}]},
+      options:{...baseOptions(),cutout:"58%"}});
+  }}
+  { const dv = D.delivery_status; const c = ensureCanvas("deliveryChart"); if(c){
+    const total = dv.reduce((a,x)=>a+x.count,0);
+    new Chart(c,{type:"bar",
+      data:{labels:dv.map(x=>x.status),datasets:[{data:dv.map(x=>x.count),backgroundColor:["#34d399","#fb7185"],borderRadius:6}]},
+      options:{...baseOptions(),plugins:{legend:{display:false}},scales:{y:{grid:{color:"rgba(143,161,192,.08)"}}}}});
+  }}
+  { const cr = D.sales_by_carrier; const c = ensureCanvas("carrierChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:cr.map(x=>x.carrier),datasets:[{label:"Revenue",data:cr.map(x=>x.revenue),backgroundColor:PALETTE,borderRadius:6}]},
+      options:{...baseOptions(),plugins:{legend:{display:false}},scales:{y:{grid:{color:"rgba(143,161,192,.08)"}}}}});
+  }}
+  { const sm = D.shipping_modes; const c = ensureCanvas("modeChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:sm.map(x=>x.mode),datasets:[{label:"Orders",data:sm.map(x=>x.count),backgroundColor:[PALETTE[3],PALETTE[4],PALETTE[1],PALETTE[2]],borderRadius:6}]},
+      options:{...baseOptions(),plugins:{legend:{display:false}},scales:{y:{grid:{color:"rgba(143,161,192,.08)"}}}}});
+  }}
+  { const co = D.sales_by_country; const c = ensureCanvas("countryChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:co.map(x=>x.country),datasets:[{label:"Revenue",data:co.map(x=>x.revenue),backgroundColor:"#60a5fa",borderRadius:5}]},
+      options:{...baseOptions(),indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
+  }}
+}
+
+// ================= PROCUREMENT CHARTS =================
+function buildProc(){
+  const box = $("#procCharts");
+  box.innerHTML =
+    card("Monthly procurement spend","Total cost per PO, aggregated by order month.","procSpendChart") +
+    card("Top 10 suppliers by spend","Spend concentration among suppliers (Gold: supplier_performance_summary).","topSupplierChart") +
+    card("Spend by region","Supplier regions with the highest procurement value.","regionChart") +
+    card("Spend by country","Top 8 supplier countries by total spend.","countrySpendChart") +
+    card("Top raw materials by spend","Products bought from suppliers, by total cost.","topProcProductChart") +
+    card("Spend by certification tier","Does certification correlate with where money goes?","certSpendChart");
+
+  const mp = D.monthly_procurement;
+  { const c = ensureCanvas("procSpendChart"); if(c){
+    new Chart(c,{type:"line",
+      data:{labels:mp.map(m=>m.month),datasets:[{label:"Spend",data:mp.map(m=>m.spend),borderColor:"#fbbf24",backgroundColor:"rgba(251,191,36,.12)",fill:true,borderWidth:2,tension:.35}]},
+      options:{...baseOptions(),plugins:{legend:{display:false}}}});
+  }}
+  { const s = D.supplier_performance.slice(0,10); const c = ensureCanvas("topSupplierChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:s.map(x=>x.name),datasets:[{label:"Spend",data:s.map(x=>x.spend),backgroundColor:"#fbbf24",borderRadius:5}]},
+      options:{...baseOptions(),indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
+  }}
+  { const r = D.spend_by_region; const c = ensureCanvas("regionChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:r.map(x=>x.region),datasets:[{label:"Spend",data:r.map(x=>x.spend),backgroundColor:PALETTE,borderRadius:6}]},
+      options:{...baseOptions(),plugins:{legend:{display:false}},scales:{y:{grid:{color:"rgba(143,161,192,.08)"}}}}});
+  }}
+  { const co = D.spend_by_country; const c = ensureCanvas("countrySpendChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:co.map(x=>x.country),datasets:[{label:"Spend",data:co.map(x=>x.spend),backgroundColor:"#a78bfa",borderRadius:5}]},
+      options:{...baseOptions(),indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
+  }}
+  { const t = D.top_procurement_products; const c = ensureCanvas("topProcProductChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:t.map(x=>x.name),datasets:[{label:"Spend",data:t.map(x=>x.spend),backgroundColor:"#22d3ee",borderRadius:5}]},
+      options:{...baseOptions(),indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
+  }}
+  { const cs = D.spend_by_cert; const c = ensureCanvas("certSpendChart"); if(c){
+    new Chart(c,{type:"doughnut",
+      data:{labels:cs.map(x=>x.cert),datasets:[{data:cs.map(x=>x.spend),backgroundColor:PALETTE,borderWidth:2,borderColor:"#111a2e"}]},
+      options:{...baseOptions(),cutout:"60%"}});
+  }}
+}
+
+// ================= SUPPLIER SECTION =================
+let supSort = {key:"spend", dir:-1};
+function loadSupTable(){
+  const rows = D.supplier_performance;
+  $("#supCount").textContent = rows.length + " suppliers assessed";
+  const cols = [
+    {k:"name",l:"Supplier"}, {k:"region",l:"Region"}, {k:"country",l:"Country"},
+    {k:"cert",l:"Certification"}, {k:"orders",l:"POs"}, {k:"spend",l:"Spend"},
+    {k:"stated",l:"Stated OTR"}, {k:"actual",l:"Actual OTR"}, {k:"gap",l:"Gap"},
+    {k:"avg_delay",l:"Avg delay"}, {k:"preferred",l:"Pref."},
+  ];
+  $("#supHead").innerHTML = cols.map(c=>
+    `<th data-k="${c.k}">${c.l}
+       ${supSort.key===c.k?`<span class="arr">${supSort.dir<0?"▼":"▲"}</span>`:""}
+     </th>`).join("");
+  document.querySelectorAll("#supHead th").forEach(th=>{
+    th.onclick = ()=>{
+      const k = th.dataset.k;
+      supSort.dir = supSort.key===k ? -supSort.dir : -1;
+      supSort.key = k;
+      loadSupTable();
+    };
+  });
+  const q = ($("#supSearch").value||"").trim().toLowerCase();
+  const data = [...rows].sort((a,b)=>{
+    const av = a[supSort.key], bv = b[supSort.key];
+    if(typeof av === "string" || typeof bv === "string") return (av<bv?-1:av>bv?1:0)*supSort.dir;
+    return (av-bv)*supSort.dir;
+  });
+  $("#supBody").innerHTML = data.map(s=>{
+      const match = q==="" || s.name.toLowerCase().includes(q) || s.region.toLowerCase().includes(q) || s.country.toLowerCase().includes(q);
+      const gapCls = s.gap>25?"bad":s.gap>8?"mid":"good";
+      const gapTxt = s.gap>25?"overstates":s.gap>8?"inflates":"accurate";
+      return `<tr class="${match?"":"hidden"}">
+        <td><strong style="color:#dbe5f6">${s.name}</strong></td>
+        <td>${s.region}</td><td>${s.country}</td>
+        <td>${s.cert}</td>
+        <td>${s.orders}</td>
+        <td>${money(s.spend)}</td>
+        <td>${pct(s.stated)}</td>
+        <td>${pct(s.actual)}</td>
+        <td><span class="pill ${gapCls}">${s.gap>0?"+":""}${s.gap.toFixed(1)} pp · ${gapTxt}</span></td>
+        <td>${s.avg_delay} d</td>
+        <td>${s.preferred?"<span class='pill mid'>★</span>":"−"}</td>
+      </tr>`;
+    }).join("");
+}
+$("#supSearch").addEventListener("input", loadSupTable);
+
+function buildSupplierCharts(){
+  const gap = D.supplier_performance.slice().sort((a,b)=>b.gap-a.gap).slice(0,12);
+  { const c = ensureCanvas("otrGapChart"); if(c){
+    new Chart(c,{type:"bar",
+      data:{labels:gap.map(s=>s.name),datasets:[{label:"Gap (pp)",data:gap.map(s=>s.gap),backgroundColor:"#fb7185",borderRadius:5}]},
+      options:{...baseOptions(),indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{grid:{display:false} ,title:{display:true,text:"percentage points vs actual"}}}}});
+  }}
+  { const c = ensureCanvas("otrScatterChart"); if(c){
+    const pts = D.supplier_performance.filter(s=>s.orders>0).map(s=>({
+      x:Math.round(s.stated), y:Math.round(s.actual),
+      r: Math.max(2, Math.min(9, Math.sqrt(s.spend)/60)),
+      backgroundColor: (s.actual < s.stated-5) ? "rgba(251,113,133,.7)" :
+                      (s.actual > s.stated+5) ? "rgba(52,211,153,.7)" : "rgba(148,163,189,.7)",
+      label:s.name,
+    }));
+    const line = [{x:0,y:0},{x:25,y:25},{x:50,y:50},{x:75,y:75},{x:100,y:100}];
+    new Chart(c,{type:"scatter",
+      data:{datasets:[
+        {label:"stated === actual", data:line, showLine:true, borderColor:"rgba(143,161,192,.35)", borderDash:[6,5], pointRadius:0},
+        {label:"suppliers", data:pts, pointRadius:7, hoverRadius:10},
+      ]},
+      options:{...baseOptions(),
+        plugins:{legend:{position:"bottom",labels:{...Chart.defaults.plugins.legend.labels,filter:(item)=>item.text!=="stated === actual"}}},
+        scales:{
+          x:{title:{display:true,text:"Self-reported on-time rate %"},min:0,max:100},
+          y:{title:{display:true,text:"Actual on-time rate %"},min:0,max:100},
+        }}});
+  }}
+}
+
+// ================= DATA QUALITY =================
+function buildDQ(){
+  const S = D.sales, P = D.procurement;
+  const note = `
+    <strong>Finding &mdash; order totals:</strong> the source <code>order_total</code> is the <em>pre-VAT</em> subtotal
+    (qty &times; unit price &times; (1 − discount)); VAT is applied on top (VAT&nbsp;= base &times; rate, verified on 100% of rows).
+    The pipeline's validation rule recomputes a <em>VAT-inclusive</em> total, so ${Math.round(S.order_total_mismatch/S.total_orders*100)}% of rows are
+    mismatch-flagged. This is exactly the kind of upstream inconsistency the Bronze&rarr;Silver&rarr;Gold design is meant to surface rather than silently propagate.`;
+  $("#dqNote").innerHTML = note;
+
+  const worstGap = D.supplier_performance.slice().sort((a,b)=>b.gap-a.gap)[0];
+  const items = [
+    {cls:"warn",ic:"🧮",t:"Order total mismatches",num:fmt.format(S.order_total_mismatch)+" / "+fmt.format(S.total_orders),p:"Source totals flagged vs. the pipeline's recalculated (VAT-inclusive) total. Root cause documented below."},
+    {cls:"ok",ic:"✅",t:"Delivery status consistency",num:fmt.format(S.delivery_status_mismatch)+" conflicts",p:"Source delivery_status agrees with the flag recalculated from shipping dates on every row."},
+    {cls:"warn",ic:"📉",t:"Negative-margin orders",num:fmt.format(S.negative_profit),p:"Orders where order_total &lt; COGS. Not an error, but worth reviewing for pricing pressure."},
+    {cls:"ok",ic:"🧾",t:"Procurement cost checks",num:fmt.format(P.cost_mismatch)+" mismatches",p:"qty &times; unit cost equals total_cost in all "+fmt.format(P.total_pos)+" purchase orders."},
+    {cls:"bad",ic:"🚚",t:"Late deliveries (procurement)",num:fmt.format(P.late_pos)+" of "+fmt.format(P.total_pos),p:pct(P.late_rate)+" of POs delivered after the planned date &mdash; actual on-time rate "+pct(P.actual_otr)+"."},
+    {cls:"bad",ic:"🗣️",t:"Reporting gap (worst supplier)",num:(worstGap?(worstGap.gap.toFixed(1)+" pp"):"—"),p:worstGap? `${worstGap.name} reports ${pct(worstGap.stated)} on-time but achieves ${pct(worstGap.actual)}.`:""},
+    {cls:D.customers.geo_out_of_range?"warn":"ok",ic:"🌐",t:"Geo coordinate outliers",num:fmt.format(D.customers.geo_out_of_range)+" records",p:"Customers whose lat/lon fall outside valid geographic bounds (lat −90..90, lon −180..180)."},
+    {cls:"ok",ic:"🔗",t:"Orphan-key checks",num:"surfaced in SQL",p:"Silver scripts run LEFT JOIN orphan checks across customer, product and supplier references."},
+  ];
+  $("#dqGrid").innerHTML = items.map(i=>`
+    <div class="dq-item ${i.cls}">
+      <div class="ic">${i.ic}</div>
+      <div><h4>${i.t}</h4><div class="num">${i.num}</div><p>${i.p}</p></div>
+    </div>`).join("");
+
+  const prods = D.products, sups = D.suppliers;
+  const stock = [
+    {t:"Products in catalog",v:fmt.format(prods.total),s:fmt.format(prods.active)+" active · "+fmt.format(prods.loss_making)+" loss-making",ac:"#22d3ee"},
+    {t:"Product categories",v:String(prods.by_category.length),s:"diversified catalog",ac:"#a78bfa"},
+    {t:"Suppliers",v:fmt.format(sups.total),s:fmt.format(sups.certified)+" certified · "+fmt.format(sups.preferred)+" preferred",ac:"#fbbf24"},
+    {t:"Customers",v:fmt.format(D.customers.total),s:"serving "+fmt.format(D.sales_by_country.length)+" countries",ac:"#34d399"},
+  ];
+  $("#stockGrid").innerHTML = stock.map(s=>`
+    <div class="card fade-in" style="--ac:${s.ac}">
+      <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">${s.t}</h3>
+      <div style="font-size:26px;font-weight:800;margin-top:8px;color:var(--ac,${s.ac})">${s.v}</div>
+      <div class="hint" style="margin:6px 0 0">${s.s}</div>
+    </div>`).join("");
+}
+
+// ---------- run ----------
+if(typeof Chart === "undefined"){
+  document.querySelectorAll("[id$=Chart]").forEach(el=>{ if(el) el.parentElement.innerHTML = "<div style='color:#fb7185;font-size:13px'>Chart.js failed to load (offline?).</div>"; });
+} else {
+  buildSales(); buildProc(); buildSupplierCharts(); loadSupTable();
+}
+buildDQ();
+
+// fade-in
+const io = new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){e.target.classList.add("on"); io.unobserve(e.target);} }),{threshold:.08});
+document.querySelectorAll(".fade-in").forEach(el=>io.observe(el));
+
+const heroMetrics = document.getElementById("heroMetrics");
+if(heroMetrics){ heroMetrics.classList.add("fade-in"); io.observe(heroMetrics); }
+</script>
+</body>
+</html>

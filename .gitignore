@@ -1,0 +1,9 @@
+# nested ZIP-extraction duplicate (identical copy of the repo root)
+/Supply-Chain-Analysis-main/
+
+# OS / editor junk
+Thumbs.db
+.DS_Store
+*.swp
+.idea/
+.vscode/
